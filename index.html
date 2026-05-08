@@ -58,6 +58,7 @@
             <div class="conv-item"><span>🇺🇸 USD</span> <span id="conv-usd">0.00</span></div>
             <div class="conv-item"><span>🇪🇺 EUR</span> <span id="conv-eur">0.00</span></div>
             <div class="conv-item"><span>🇯🇵 JPY</span> <span id="conv-jpy">0.00</span></div>
+            <div class="conv-item"><span>🇻🇳 VND</span> <span id="conv-vnd">0</span></div>
             <div class="conv-item"><span>🇦🇷 ARS (Blue)</span> <span id="conv-ars">0.00</span></div>
         </div>
         <small id="rate-update-time">Actualizando tasas...</small>
@@ -149,7 +150,7 @@
         } catch (e) {
             document.getElementById('rate-update-time').innerText = "Modo Offline";
             // Tasas aproximadas de respaldo (1 THB a X divisa)
-            exchangeRates = { USD: 0.027, EUR: 0.025, JPY: 4.22 };
+            exchangeRates = { USD: 0.027, EUR: 0.025, JPY: 4.22, VND: 690 };
             dolarBlueVenta = 1200;
             convertCurrency();
         }
@@ -164,6 +165,8 @@
             document.getElementById('conv-usd').innerText = `U$D ${usd.toFixed(2)}`;
             document.getElementById('conv-eur').innerText = `€ ${(thb * exchangeRates.EUR).toFixed(2)}`;
             document.getElementById('conv-jpy').innerText = `¥ ${(thb * exchangeRates.JPY).toFixed(2)}`;
+            // Agregado el cálculo de VND
+            document.getElementById('conv-vnd').innerText = `₫ ${formatNumber(Math.round(thb * exchangeRates.VND))}`;
             document.getElementById('conv-ars').innerText = `$ ${formatNumber(Math.round(usd * dolarBlueVenta))}`;
         }
     }
@@ -289,7 +292,6 @@
         const expList = document.getElementById('expense-list');
         expList.innerHTML = '';
         
-        // Agrupar gastos por fecha
         const grouped = expenses.reduce((acc, exp) => {
             if (!acc[exp.date]) acc[exp.date] = [];
             acc[exp.date].push(exp);
@@ -301,10 +303,8 @@
         sortedDates.forEach(date => {
             const dailyTotal = grouped[date].reduce((sum, exp) => sum + exp.amount, 0);
             
-            // Fila de cabecera por día
             expList.innerHTML += `<tr><td colspan="4" class="day-header">📅 ${date} - Total del día: ${formatNumber(dailyTotal)} THB</td></tr>`;
 
-            // Filas de gastos de ese día
             grouped[date].forEach(exp => {
                 expList.innerHTML += `
                     <tr>
