@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Gastos - Tailandia</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .main-wrapper { display: flex; gap: 20px; max-width: 1000px; margin: auto; align-items: flex-start; }
+        .main-content { flex: 3; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .sidebar { flex: 1; background: #2E5077; color: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); position: sticky; top: 20px; }
+        
+        h1, h2 { color: #2E5077; text-align: center; }
+        .sidebar h3 { color: white; text-align: center; margin-top: 0; border-bottom: 1px solid #5a7b9e; padding-bottom: 10px; }
+        
+        .dashboard { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; margin-bottom: 20px; }
+        .card { flex: 1 1 calc(33% - 10px); background: #e3f2fd; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; box-sizing: border-box; }
+        .card span { display: block; font-size: 1.4em; color: #1565c0; margin-top: 5px; word-break: break-all; }
+        .card.highlight { background: #d1c4e9; }
+        .card.highlight span { color: #4527a0; }
+        
+        .form-section { display: flex; flex-direction: column; gap: 10px; padding: 15px; background: #fafafa; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; }
+        input, select, button { padding: 10px; font-size: 1em; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; width: 100%; }
+        button { background-color: #2E5077; color: white; border: none; cursor: pointer; transition: background 0.3s; font-weight: bold; }
+        button:hover { background-color: #1a365d; }
+        
+        .sidebar input { width: 100%; padding: 10px; font-size: 1.1em; border: none; border-radius: 5px; margin-bottom: 15px; text-align: center; color: #333; }
+        .conversion-results { background: rgba(255,255,255,0.1); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+        .conv-item { display: flex; justify-content: space-between; font-size: 1.1em; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #2E5077; color: white; }
+        .day-header { background-color: #bbdefb; font-weight: bold; text-align: center; color: #0d47a1; }
+        
+        .actions-cell { display: flex; gap: 5px; }
+        .btn-action { padding: 5px 8px; font-size: 0.9em; border-radius: 4px; color: white; border: none; cursor: pointer; }
+        .edit-btn { background-color: #f39c12; }
+        .delete-btn { background-color: #d32f2f; }
+        
+        .backup-section { margin-top: 40px; padding: 20px; border-top: 2px dashed #ccc; text-align: center; }
+        .backup-btns { display: flex; gap: 10px; margin-top: 10px; justify-content: center; }
+
+        @media (max-width: 768px) {
+            .main-wrapper { flex-direction: column; }
+            .sidebar { position: static; order: -1; }
+            .card { flex: 1 1 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-wrapper">
+    <div class="sidebar">
+        <h3>Calculadora Rápida 💱</h3>
+        <input type="number" id="quick-thb" placeholder="Monto en Bahts (THB)" oninput="convertCurrency()">
+        <div class="conversion-results">
+            <div class="conv-item"><span>🇺🇸 USD</span> <span id="conv-usd">0.00</span></div>
+            <div class="conv-item"><span>🇪🇺 EUR</span> <span id="conv-eur">0.00</span></div>
+            <div class="conv-item"><span>🇯🇵 JPY</span> <span id="conv-jpy">0.00</span></div>
+            <div class="conv-item"><span>🇦🇷 ARS (Blue)</span> <span id="conv-ars">0.00</span></div>
+        </div>
+        <small id="rate-update-time">Actualizando tasas...</small>
+    </div>
+
+    <div class="main-content">
+        <h1>Presupuesto Tailandia 🇹🇭</h1>
+
+        <div class="dashboard">
+            <div class="card">Gastos Hoy <span id="gastos-hoy">0</span></div>
+            <div class="card">Gastos Ayer <span id="gastos-ayer">0</span></div>
+            <div class="card highlight">Promedio Diario <span id="promedio-diario">0</span></div>
+            <div class="card">Total Gastado <span id="total-gastado">0</span></div>
+            <div class="card">Total Cambiado <span id="total-cambiado">0</span></div>
+            <div class="card highlight">Saldo Disponible <span id="saldo">0</span></div>
+        </div>
+
+        <h2>Cambiar USD a THB</h2>
+        <div class="form-section">
+            <input type="number" id="usd-amount" placeholder="Cantidad de USD">
+            <input type="number" id="exchange-rate" placeholder="Tasa (Ej. 36.50)">
+            <button onclick="addExchange()">Agregar Cambio</button>
+        </div>
+
+        <h2>Historial de Cambios</h2>
+        <div style="overflow-x:auto; margin-bottom: 30px;">
+            <table>
+                <thead>
+                    <tr><th>Fecha</th><th>USD</th><th>Tasa</th><th>THB</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="exchange-list"></tbody>
+            </table>
+        </div>
+
+        <h2>Registrar Gasto</h2>
+        <div class="form-section">
+            <input type="date" id="expense-date">
+            <input type="text" id="expense-desc" placeholder="Descripción (Pad Thai, BTS, etc)">
+            <input type="number" id="expense-amount" placeholder="Monto en THB">
+            <button onclick="addExpense()">Agregar Gasto</button>
+        </div>
+
+        <h2>Lista de Gastos por Día</h2>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr><th>Fecha</th><th>Descripción</th><th>THB</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="expense-list"></tbody>
+            </table>
+        </div>
+
+        <div class="backup-section">
+            <h3>Copia de Seguridad 💾</h3>
+            <p style="font-size: 0.8em; color: #666;">Exportá tus datos para no perderlos si cambias de celu.</p>
+            <div class="backup-btns">
+                <button onclick="exportData()" style="background-color: #27ae60;">Exportar Datos</button>
+                <button onclick="importData()" style="background-color: #2980b9;">Importar Datos</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let exchangeRates = {};
+    let dolarBlueVenta = 0;
+    
+    // Cargar datos sin borrar nada (Usamos claves exclusivas para Tailandia)
+    let exchanges = JSON.parse(localStorage.getItem('th_exchanges')) || [];
+    let expenses = JSON.parse(localStorage.getItem('th_expenses')) || [];
+
+    // Validar datos viejos para que no se rompan
+    exchanges = exchanges.map((ex, idx) => ({...ex, id: ex.id || Date.now() + idx}));
+    expenses = expenses.map((exp, idx) => ({...exp, id: exp.id || Date.now() + idx}));
+
+    async function fetchRates() {
+        try {
+            // Obtenemos tasas base THB
+            const responseTHB = await fetch('https://open.er-api.com/v6/latest/THB');
+            const dataTHB = await responseTHB.json();
+            exchangeRates = dataTHB.rates;
+            
+            const responseBlue = await fetch('https://dolarapi.com/v1/dolares/blue');
+            const dataBlue = await responseBlue.json();
+            dolarBlueVenta = dataBlue.venta;
+            
+            document.getElementById('rate-update-time').innerText = `Tasas OK - Blue: $${dolarBlueVenta}`;
+            convertCurrency();
+        } catch (e) {
+            document.getElementById('rate-update-time').innerText = "Modo Offline";
+            // Tasas aproximadas de respaldo (1 THB a X divisa)
+            exchangeRates = { USD: 0.027, EUR: 0.025, JPY: 4.22 };
+            dolarBlueVenta = 1200;
+            convertCurrency();
+        }
+    }
+
+    function formatNumber(num) { return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num); }
+
+    function convertCurrency() {
+        const thb = parseFloat(document.getElementById('quick-thb').value) || 0;
+        if(exchangeRates.USD) {
+            const usd = thb * exchangeRates.USD;
+            document.getElementById('conv-usd').innerText = `U$D ${usd.toFixed(2)}`;
+            document.getElementById('conv-eur').innerText = `€ ${(thb * exchangeRates.EUR).toFixed(2)}`;
+            document.getElementById('conv-jpy').innerText = `¥ ${(thb * exchangeRates.JPY).toFixed(2)}`;
+            document.getElementById('conv-ars').innerText = `$ ${formatNumber(Math.round(usd * dolarBlueVenta))}`;
+        }
+    }
+
+    function getLocalYYYYMMDD(dateObj) {
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    document.getElementById('expense-date').value = getLocalYYYYMMDD(new Date());
+
+    function updateDashboard() {
+        const totalCambiado = exchanges.reduce((acc, curr) => acc + curr.thb, 0);
+        const totalGastado = expenses.reduce((acc, curr) => acc + curr.amount, 0);
+        
+        document.getElementById('total-cambiado').innerText = formatNumber(totalCambiado);
+        document.getElementById('total-gastado').innerText = formatNumber(totalGastado);
+        document.getElementById('saldo').innerText = formatNumber(totalCambiado - totalGastado);
+
+        const hoyStr = getLocalYYYYMMDD(new Date());
+        const ayerObj = new Date();
+        ayerObj.setDate(ayerObj.getDate() - 1);
+        const ayerStr = getLocalYYYYMMDD(ayerObj);
+
+        const gastosHoy = expenses.filter(e => e.date === hoyStr).reduce((acc, curr) => acc + curr.amount, 0);
+        const gastosAyer = expenses.filter(e => e.date === ayerStr).reduce((acc, curr) => acc + curr.amount, 0);
+
+        document.getElementById('gastos-hoy').innerText = formatNumber(gastosHoy);
+        document.getElementById('gastos-ayer').innerText = formatNumber(gastosAyer);
+
+        if (expenses.length > 0) {
+            const dates = [...new Set(expenses.map(e => e.date))];
+            document.getElementById('promedio-diario').innerText = formatNumber(totalGastado / dates.length);
+        } else {
+            document.getElementById('promedio-diario').innerText = "0";
+        }
+
+        localStorage.setItem('th_exchanges', JSON.stringify(exchanges));
+        localStorage.setItem('th_expenses', JSON.stringify(expenses));
+        renderTables();
+    }
+
+    function addExchange() {
+        const usd = parseFloat(document.getElementById('usd-amount').value);
+        const rate = parseFloat(document.getElementById('exchange-rate').value);
+        if (usd && rate) {
+            exchanges.push({ id: Date.now(), usd, rate, thb: usd * rate, date: getLocalYYYYMMDD(new Date()) });
+            updateDashboard();
+            document.getElementById('usd-amount').value = '';
+            document.getElementById('exchange-rate').value = '';
+        }
+    }
+
+    function addExpense() {
+        const date = document.getElementById('expense-date').value;
+        const desc = document.getElementById('expense-desc').value;
+        const amount = parseFloat(document.getElementById('expense-amount').value);
+        if (date && desc && amount) {
+            expenses.push({ id: Date.now(), date, desc, amount });
+            updateDashboard();
+            document.getElementById('expense-desc').value = '';
+            document.getElementById('expense-amount').value = '';
+        }
+    }
+
+    function deleteItem(id, type) {
+        if (confirm('¿Borrar este registro?')) {
+            if (type === 'ex') exchanges = exchanges.filter(i => i.id !== id);
+            else expenses = expenses.filter(i => i.id !== id);
+            updateDashboard();
+        }
+    }
+
+    function editItem(id, type) {
+        if (type === 'ex') {
+            const item = exchanges.find(i => i.id === id);
+            if (!item) return;
+            const newUSD = prompt("Nuevo monto en USD:", item.usd);
+            if (newUSD === null) return; 
+            const newRate = prompt("Nueva tasa de cambio (Ej. 36.50):", item.rate);
+            if (newRate === null) return;
+
+            if (!isNaN(newUSD) && !isNaN(newRate) && newUSD !== "" && newRate !== "") {
+                item.usd = parseFloat(newUSD);
+                item.rate = parseFloat(newRate);
+                item.thb = item.usd * item.rate;
+                updateDashboard();
+            } else {
+                alert("Por favor, ingresá números válidos.");
+            }
+        } else {
+            const item = expenses.find(i => i.id === id);
+            if (!item) return;
+            const newDesc = prompt("Nueva descripción:", item.desc);
+            if (newDesc === null) return;
+            const newAmount = prompt("Nuevo monto en THB:", item.amount);
+            if (newAmount === null) return;
+
+            if (newDesc.trim() !== '' && !isNaN(newAmount) && newAmount !== "") {
+                item.desc = newDesc;
+                item.amount = parseFloat(newAmount);
+                updateDashboard();
+            } else {
+                alert("Datos inválidos. Intentá de nuevo.");
+            }
+        }
+    }
+
+    function renderTables() {
+        const exList = document.getElementById('exchange-list');
+        exList.innerHTML = exchanges.sort((a,b) => new Date(b.date) - new Date(a.date)).map(ex => `
+            <tr>
+                <td>${ex.date}</td><td>${formatNumber(ex.usd)}</td><td>${formatNumber(ex.rate)}</td><td>${formatNumber(ex.thb)}</td>
+                <td class="actions-cell">
+                    <button class="btn-action edit-btn" onclick="editItem(${ex.id}, 'ex')">✏️</button>
+                    <button class="btn-action delete-btn" onclick="deleteItem(${ex.id}, 'ex')">X</button>
+                </td>
+            </tr>
+        `).join('');
+
+        const expList = document.getElementById('expense-list');
+        expList.innerHTML = '';
+        
+        // Agrupar gastos por fecha
+        const grouped = expenses.reduce((acc, exp) => {
+            if (!acc[exp.date]) acc[exp.date] = [];
+            acc[exp.date].push(exp);
+            return acc;
+        }, {});
+
+        const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
+
+        sortedDates.forEach(date => {
+            const dailyTotal = grouped[date].reduce((sum, exp) => sum + exp.amount, 0);
+            
+            // Fila de cabecera por día
+            expList.innerHTML += `<tr><td colspan="4" class="day-header">📅 ${date} - Total del día: ${formatNumber(dailyTotal)} THB</td></tr>`;
+
+            // Filas de gastos de ese día
+            grouped[date].forEach(exp => {
+                expList.innerHTML += `
+                    <tr>
+                        <td>${exp.date}</td>
+                        <td>${exp.desc}</td>
+                        <td>${formatNumber(exp.amount)}</td>
+                        <td class="actions-cell">
+                            <button class="btn-action edit-btn" onclick="editItem(${exp.id}, 'exp')">✏️</button>
+                            <button class="btn-action delete-btn" onclick="deleteItem(${exp.id}, 'exp')">X</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        });
+    }
+
+    function exportData() {
+        const data = JSON.stringify({ exchanges, expenses });
+        const text = btoa(unescape(encodeURIComponent(data))); 
+        prompt("Copiá este código y guardalo en un lugar seguro (bloc de notas, whatsapp, etc):", text);
+    }
+
+    function importData() {
+        const code = prompt("Pegá acá el código de seguridad que exportaste:");
+        if (code) {
+            try {
+                const decoded = JSON.parse(decodeURIComponent(escape(atob(code))));
+                if (confirm("Se van a sobreescribir tus datos actuales de la pantalla. ¿Continuar?")) {
+                    exchanges = decoded.exchanges || [];
+                    expenses = decoded.expenses || [];
+                    updateDashboard();
+                    alert("Datos restaurados correctamente.");
+                }
+            } catch (e) { alert("Código inválido o dañado."); }
+        }
+    }
+
+    fetchRates();
+    updateDashboard();
+</script>
+</body>
+</html>
